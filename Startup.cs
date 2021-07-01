@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
+using StockBackendMongo.DTOS.Response;
 using StockBackendMongo.Repositories;
 using StockBackendMongo.Settings;
 
@@ -16,12 +18,17 @@ namespace StockBackendMongo
         public Startup(IConfiguration configuration) => Configuration = configuration;
 
         public IConfiguration Configuration { get; }
+        public IWebHostEnvironment WebHostEnvironment { get; }
+
 
         // This method gets called by the runtime. Use this method to add services to the container.
+
         public void ConfigureServices(IServiceCollection services)
         {
             MongoDbConnect(services);
+            CreateDir();
             services.AddSingleton<IProductRepository, ProductRepository>();
+            services.AddSingleton<IUploadFileService, UploadFileService>();
 
             services.AddControllers();
             services.AddSwaggerGen(c =>
@@ -29,6 +36,16 @@ namespace StockBackendMongo
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "StockBackendMongo", Version = "v1" });
             });
         }
+
+        public void CreateDir()
+        {
+            string root = "wwwroot/images/";
+            if (!Directory.Exists(root))
+            {
+                Directory.CreateDirectory(root);
+            }
+        }
+
 
         private void MongoDbConnect(IServiceCollection services)
         {
@@ -42,6 +59,7 @@ namespace StockBackendMongo
             });
         }
 
+
         private object MongoDbSettings() => throw new NotImplementedException();
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -54,7 +72,10 @@ namespace StockBackendMongo
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "StockBackendMongo v1"));
             }
 
+
             app.UseHttpsRedirection();
+
+            app.UseStaticFiles(); // */images/*
 
             app.UseRouting();
 

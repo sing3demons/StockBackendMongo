@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using StockBackendMongo.Entities;
 
 namespace StockBackendMongo.Repositories
@@ -12,5 +13,7 @@ namespace StockBackendMongo.Repositories
         Task Create(Product product);
         Task Update(Product product);
         Task Delete(string id);
+
+        Task<(string errorMessage, string imageName)> UploadImage(List<IFormFile> formFiles);
     }
 }

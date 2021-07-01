@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using StockBackendMongo.Entities;
@@ -12,11 +13,13 @@ namespace StockBackendMongo.Repositories
         private const string collectionName = "products";
         private readonly IMongoCollection<Product> collection;
         private readonly FilterDefinitionBuilder<Product> filterBuilder = Builders<Product>.Filter;
+        private readonly IUploadFileService uploadFileService;
 
-        public ProductRepository(IMongoClient client)
+        public ProductRepository(IMongoClient client, IUploadFileService uploadFileService)
         {
             var database = client.GetDatabase(databaseName);
             collection = database.GetCollection<Product>(collectionName);
+            this.uploadFileService = uploadFileService;
         }
         public async Task Create(Product product)
         {
@@ -46,6 +49,21 @@ namespace StockBackendMongo.Repositories
         {
             var filter = filterBuilder.Eq(p => p.Id, product.Id);
             await collection.ReplaceOneAsync(filter, product);
+        }
+
+        public async Task<(string errorMessage, string imageName)> UploadImage(List<IFormFile> formFiles)
+        {
+            string errorMessage = string.Empty;
+            string imageName = string.Empty;
+            if (uploadFileService.IsUpload(formFiles))
+            {
+                errorMessage = uploadFileService.Validation(formFiles);
+                if (string.IsNullOrEmpty(errorMessage))
+                {
+                    imageName = (await uploadFileService.UploadImages(formFiles))[0];
+                }
+            }
+            return (errorMessage, imageName);
         }
     }
 }
