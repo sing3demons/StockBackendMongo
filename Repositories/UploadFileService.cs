@@ -31,6 +31,10 @@ namespace StockBackendMongo.Repositories
             throw new NotImplementedException();
         }
 
+
+
+
+
         public async Task<List<string>> UploadImages(List<IFormFile> formFiles)
         {
             List<string> listFileName = new List<string>();
@@ -54,6 +58,7 @@ namespace StockBackendMongo.Repositories
         public Task RemoveImage(string image)
         {
             string uploadPath = $"{webHostEnvironment.WebRootPath}/images/";
+
             string fullPath = uploadPath + image;
             File.Delete(fullPath);
             return Task.CompletedTask;
@@ -88,5 +93,6 @@ namespace StockBackendMongo.Repositories
             bool result = configuration.GetValue<long>("FileSizeLimit") > fileSize;
             return result;
         }
+
     }
 }

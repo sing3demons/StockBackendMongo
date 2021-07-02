@@ -1,4 +1,5 @@
 using StockBackendMongo.Entities;
+using StockBackendMongo.Settings;
 
 namespace StockBackendMongo.DTOS.Response
 {
@@ -10,15 +11,16 @@ namespace StockBackendMongo.DTOS.Response
         public double Price { get; set; }
         public int Stock { get; set; }
         public string Image { get; set; }
+   
 
-        public static ProductResponse FromProduct(Product product)
+        public static ProductResponse FromProduct(Product product,Constants constants)
         {
             return new ProductResponse
             {
                 Id = product.Id,
                 Name = product.Name,
                 Description = product.Description,
-                Image = "https://localhost:5001/" + "images/" + product.Image,
+                Image = constants.Host + constants.Image + product.Image,
                 Price = product.Price,
                 Stock = product.Stock,
             };

@@ -1,13 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
-using StockBackendMongo.DTOS.Response;
 using StockBackendMongo.Repositories;
 using StockBackendMongo.Settings;
 
@@ -29,12 +32,77 @@ namespace StockBackendMongo
             CreateDir();
             services.AddSingleton<IProductRepository, ProductRepository>();
             services.AddSingleton<IUploadFileService, UploadFileService>();
+            services.AddSingleton<IAuthRepository, AuthRepository>();
+
+            var constants = new Constants();
+            Configuration.Bind(nameof(constants), constants);
+            services.AddSingleton(constants);
+            AuthenticationAndJWTBearer(services);
 
             services.AddControllers();
+
+            //AddSwaggerGen
+            ConfigSwaggerAuthenticate(services);
+        }
+
+        private void ConfigSwaggerAuthenticate(IServiceCollection services)
+        {
+            var Bearer = "Bearer";
             services.AddSwaggerGen(c =>
+           {
+               c.SwaggerDoc("v1", new OpenApiInfo { Title = "StockBackendMongo", Version = "v1" });
+
+               c.AddSecurityDefinition(Bearer, new OpenApiSecurityScheme
+               {
+                   BearerFormat = "JWT",
+                   Description = "JWT Authorization",
+                   Name = "Authorization",
+                   In = ParameterLocation.Header,
+                   Type = SecuritySchemeType.Http,
+                   Scheme = Bearer,
+               });
+
+               c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                    {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference=new OpenApiReference                        {
+                            Id="Bearer",Type=ReferenceType.SecurityScheme,
+                        },
+                        Scheme=Bearer,Name=Bearer,In=ParameterLocation.Header
+                    },
+                        new List<string>()
+                    }
+               });
+           });
+        }
+
+        public void AuthenticationAndJWTBearer(IServiceCollection services)
+        {
+            var jwtSettings = new JwtSettings();
+            Configuration.Bind(nameof(jwtSettings), jwtSettings);
+            services.AddSingleton(jwtSettings);
+
+            services.AddAuthentication(options =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "StockBackendMongo", Version = "v1" });
-            });
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+                .AddJwtBearer(opt =>
+                {
+                    opt.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = jwtSettings.Issuer,
+                        ValidateAudience = true,
+                        ValidAudience = jwtSettings.Audience,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
         }
 
         public void CreateDir()
@@ -60,6 +128,8 @@ namespace StockBackendMongo
         }
 
 
+
+
         private object MongoDbSettings() => throw new NotImplementedException();
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -78,6 +148,8 @@ namespace StockBackendMongo
             app.UseStaticFiles(); // */images/*
 
             app.UseRouting();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
